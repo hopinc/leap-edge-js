@@ -1,0 +1,13 @@
+{
+  "name": "leap-edge-js",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "author": "Phineas Walton <phin@hop.io>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^17.0.38"
+  },
+  "dependencies": {
+    "ws": "^8.7.0"
+  }
+}
