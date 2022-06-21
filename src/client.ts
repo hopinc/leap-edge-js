@@ -1,33 +1,54 @@
-import { Heartbeat, Hello } from "./messages/control";
+import { Dispatch, Heartbeat, Hello } from "./messages/control";
 import { EncapsulatingPayload } from "./messages/payload";
 import { OpCode, PayloadType } from "./messages/opcodes";
 import { errorMap, unknownError, LeapError } from "./messages/errors";
+import { EventEmitter } from "stream";
 
 const ENDPOINT = "wss://leap-stg.hop.io/ws";
 // const ENDPOINT = "ws://localhost:4001/ws";
 
+interface LeapEdgeAuthenticationParameters {
+  token?: string;
+  projectId: string;
+}
+
+export enum LeapConnectionState {
+  IDLE = "idle",
+  CONNECTING = "connecting",
+  AUTHENTICATING = "authenticating",
+  CONNECTED = "connected",
+  ERRORED = "errored",
+}
+
 const WebSocket =
   typeof window === "undefined" ? require("ws") : window.WebSocket;
 
-export class LeapEdgeClient {
-  public token: string;
+export class LeapEdgeClient extends EventEmitter {
+  public auth: LeapEdgeAuthenticationParameters;
   private endpoint: string;
   private socket: WebSocket | null;
   private heartbeat: ReturnType<typeof setTimeout> | null;
+  private connectionState: LeapConnectionState;
 
-  constructor(token: string) {
-    this.token = token;
+  constructor(auth: LeapEdgeAuthenticationParameters) {
+    super();
+    this.auth = auth;
     this.endpoint = ENDPOINT;
     this.socket = null;
     this.heartbeat = null;
+    this.connectionState = LeapConnectionState.IDLE;
   }
 
   /**
    * Connect to Leap Edge
    */
   public connect = () => {
-    if (this.socket) return;
+    if (this.socket)
+      return console.warn(
+        "[Leap Edge] LeapEdgeClient#connect was called during active connection. This is a noop."
+      );
 
+    this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
     this.socket = new WebSocket(this.endpoint);
     if (!this.socket) return;
 
@@ -85,7 +106,21 @@ export class LeapEdgeClient {
     data: PayloadType[T]
   ) => {
     switch (opcode) {
+      case OpCode.DISPATCH: {
+        const d = <Dispatch>data;
+        if (d.e === "INIT")
+          this._updateObservedConnectionState(LeapConnectionState.CONNECTED);
+
+        this.emit("serviceEvent", {
+          channelId: d.c,
+          eventType: d.e,
+          data: d.d,
+        });
+
+        break;
+      }
       case OpCode.HELLO: {
+        this._updateObservedConnectionState(LeapConnectionState.AUTHENTICATING);
         this._setupHeartbeat((<Hello>data).heartbeat_interval);
         this._identify();
         break;
@@ -99,8 +134,8 @@ export class LeapEdgeClient {
 
   private _identify = () => {
     this.sendPayload(OpCode.IDENTIFY, {
-      project_id: "project_0",
-      token: this.token,
+      project_id: this.auth.projectId,
+      token: this.auth.token,
     });
   };
 
@@ -108,5 +143,10 @@ export class LeapEdgeClient {
     this.heartbeat = setInterval(() => {
       this.sendPayload(OpCode.HEARTBEAT);
     }, int);
+  };
+
+  private _updateObservedConnectionState = (state: LeapConnectionState) => {
+    this.connectionState = state;
+    this.emit("connectionStateUpdate", state);
   };
 }
