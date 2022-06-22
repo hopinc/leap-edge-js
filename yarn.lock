@@ -59,6 +59,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@onehop/leap-edge-js@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "@onehop/leap-edge-js@workspace:."
+  dependencies:
+    "@types/node": ^18.0.0
+    "@types/prettier": ^2
+    "@types/ws": ^8.5.3
+    prettier: ^2.7.1
+    tsup: ^6.1.2
+    typescript: ^4.7.4
+    ws: ^8.8.0
+  languageName: unknown
+  linkType: soft
+
 "@tootallnate/once@npm:2":
   version: 2.0.0
   resolution: "@tootallnate/once@npm:2.0.0"
@@ -965,20 +979,6 @@ __metadata:
   checksum: 8003c9c3fc79c5c7602b1c7e9f7a2df2e9916f046b0dbad862aa589be78c15734d11beb9fe846f5e06138df22cb2ad29961b6a986ba81c4920ce2b15a7f11067
   languageName: node
   linkType: hard
-
-"leap-edge-js@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "leap-edge-js@workspace:."
-  dependencies:
-    "@types/node": ^18.0.0
-    "@types/prettier": ^2
-    "@types/ws": ^8.5.3
-    prettier: ^2.7.1
-    tsup: ^6.1.2
-    typescript: ^4.7.4
-    ws: ^8.8.0
-  languageName: unknown
-  linkType: soft
 
 "lilconfig@npm:^2.0.5":
   version: 2.0.5

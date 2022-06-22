@@ -1,5 +1,5 @@
 {
-	"name": "leap-edge-js",
+	"name": "@onehop/leap-edge-js",
 	"description": "JavaScript client for Leap Edge, by Hop.io",
 	"version": "0.0.1",
 	"main": "dist/index.js",
