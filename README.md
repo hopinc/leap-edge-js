@@ -7,12 +7,12 @@ Utility library for connecting and receiving events from [Leap Edge](https://doc
 ### Connecting
 
 ```ts
-import { LeapEdgeClient } from "leap-edge-js";
+import {LeapEdgeClient} from 'leap-edge-js';
 
-const projectId = "project_xxx";
-const token = "leap_token_xxx";
+const projectId = 'project_xxx';
+const token = 'leap_token_xxx';
 
-const leap = new LeapEdgeClient({ projectId, token });
+const leap = new LeapEdgeClient({projectId, token});
 leap.connect();
 ```
 
@@ -21,15 +21,15 @@ leap.connect();
 ### Listening for Connection Status Updates
 
 ```ts
-leap.on("connectionStatusUpdate", (status: LeapConnectionStatus) => {
-  // do something with status
+leap.on('connectionStatusUpdate', (status: LeapConnectionStatus) => {
+	// do something with status
 });
 ```
 
 ### Listening for Service Events
 
 ```ts
-leap.on("serviceEvent", ({ channelId, eventType, data }: LeapServiceEvent) => {
-  // do something
+leap.on('serviceEvent', ({channelId, eventType, data}: LeapServiceEvent) => {
+	// do something
 });
 ```

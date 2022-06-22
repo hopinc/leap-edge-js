@@ -1,152 +1,177 @@
-import { Dispatch, Heartbeat, Hello } from "./messages/control";
-import { EncapsulatingPayload } from "./messages/payload";
-import { OpCode, PayloadType } from "./messages/opcodes";
-import { errorMap, unknownError, LeapError } from "./messages/errors";
-import { EventEmitter } from "stream";
+import {Dispatch, Heartbeat, Hello} from './messages/control';
+import {EncapsulatingPayload} from './messages/payload';
+import {OpCode, PayloadType} from './messages/opcodes';
+import {errorMap, unknownError, LeapError} from './messages/errors';
+import {EventEmitter} from 'stream';
+import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
-const ENDPOINT = "wss://leap-stg.hop.io/ws";
+const ENDPOINT = 'wss://leap-stg.hop.io/ws';
 // const ENDPOINT = "ws://localhost:4001/ws";
 
 interface LeapEdgeAuthenticationParameters {
-  token?: string;
-  projectId: string;
+	token?: string;
+	projectId: string;
 }
 
 export enum LeapConnectionState {
-  IDLE = "idle",
-  CONNECTING = "connecting",
-  AUTHENTICATING = "authenticating",
-  CONNECTED = "connected",
-  ERRORED = "errored",
+	IDLE = 'idle',
+	CONNECTING = 'connecting',
+	AUTHENTICATING = 'authenticating',
+	CONNECTED = 'connected',
+	ERRORED = 'errored',
 }
 
-const WebSocket =
-  typeof window === "undefined" ? require("ws") : window.WebSocket;
+const WebSocket: {new (url: string): WSWebSocket} =
+	typeof window === 'undefined' ? require('ws') : window.WebSocket;
 
 export class LeapEdgeClient extends EventEmitter {
-  public auth: LeapEdgeAuthenticationParameters;
-  private endpoint: string;
-  private socket: WebSocket | null;
-  private heartbeat: ReturnType<typeof setTimeout> | null;
-  private connectionState: LeapConnectionState;
+	public auth: LeapEdgeAuthenticationParameters;
+	private endpoint: string;
+	private socket: WSWebSocket | null;
+	private heartbeat: ReturnType<typeof setTimeout> | null;
+	private connectionState: LeapConnectionState;
 
-  constructor(auth: LeapEdgeAuthenticationParameters) {
-    super();
-    this.auth = auth;
-    this.endpoint = ENDPOINT;
-    this.socket = null;
-    this.heartbeat = null;
-    this.connectionState = LeapConnectionState.IDLE;
-  }
+	constructor(auth: LeapEdgeAuthenticationParameters) {
+		super();
+		this.auth = auth;
+		this.endpoint = ENDPOINT;
+		this.socket = null;
+		this.heartbeat = null;
+		this.connectionState = LeapConnectionState.IDLE;
+	}
 
-  /**
-   * Connect to Leap Edge
-   */
-  public connect = () => {
-    if (this.socket)
-      return console.warn(
-        "[Leap Edge] LeapEdgeClient#connect was called during active connection. This is a noop."
-      );
+	/**
+	 * Connect to Leap Edge
+	 */
+	public connect = () => {
+		if (this.socket) {
+			console.warn(
+				'[Leap Edge] LeapEdgeClient#connect was called during active connection. This is a noop.',
+			);
 
-    this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
-    this.socket = new WebSocket(this.endpoint);
-    if (!this.socket) return;
+			return;
+		}
 
-    this.socket.addEventListener("message", this._handleSocketMessage);
-    this.socket.addEventListener("close", this._handleSocketClose);
-  };
+		this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
+		this.socket = new WebSocket(this.endpoint);
 
-  private sendPayload = (op: number, d: any = null): void => {
-    void this.encodeSend(d ? { op, d } : { op });
-  };
+		if (!this.socket) {
+			return;
+		}
 
-  private encodeSend = (d: unknown) => {
-    if (!this.socket) return;
-    console.log("send:", d);
-    this.socket.send(JSON.stringify(d));
-  };
+		this.socket.addEventListener('message', d => {
+			console.log(d);
+		});
 
-  private _handleSocketClose = (e: CloseEvent) => {
-    if (this.heartbeat) clearInterval(this.heartbeat);
+		this.socket.addEventListener('message', this._handleSocketMessage);
+		this.socket.addEventListener('close', this._handleSocketClose);
+	};
 
-    this.socket = null;
-    this.heartbeat = null;
+	private sendPayload = (op: number, d: any = null): void => {
+		void this.encodeSend(d ? {op, d} : {op});
+	};
 
-    const errorCode = e.code as LeapError;
-    const error = errorMap[errorCode] || unknownError;
+	private encodeSend = (d: unknown) => {
+		if (!this.socket) {
+			return;
+		}
 
-    console.warn("[Leap Edge] Client disconnected unexpectedly:", error);
+		console.log('send:', d);
+		this.socket.send(JSON.stringify(d));
+	};
 
-    switch (errorCode) {
-      case LeapError.BAD_ROUTE: {
-        this.endpoint = e.reason;
-        this.connect();
-        break;
-      }
-      default: {
-        if (error.reconnect) this.connect();
-        break;
-      }
-    }
-  };
+	private _handleSocketClose = (e: CloseEvent) => {
+		if (this.heartbeat) clearInterval(this.heartbeat);
 
-  private _handleSocketMessage = (m: MessageEvent<any>) => {
-    const data: EncapsulatingPayload = JSON.parse(m.data);
-    if (data.op == null) {
-      return console.warn("leap edge received badly formatted payload:", data);
-    }
+		this.socket = null;
+		this.heartbeat = null;
 
-    console.log("recv:", data);
+		const errorCode = e.code as LeapError;
+		const error = errorMap[errorCode] || unknownError;
 
-    this._handleOpcode(data.op, data.d);
-  };
+		console.warn('[Leap Edge] Client disconnected unexpectedly:', error);
 
-  private _handleOpcode = <T extends keyof PayloadType>(
-    opcode: T,
-    data: PayloadType[T]
-  ) => {
-    switch (opcode) {
-      case OpCode.DISPATCH: {
-        const d = <Dispatch>data;
-        if (d.e === "INIT")
-          this._updateObservedConnectionState(LeapConnectionState.CONNECTED);
+		switch (errorCode) {
+			case LeapError.BAD_ROUTE: {
+				this.endpoint = e.reason;
+				this.connect();
+				break;
+			}
 
-        this.emit("serviceEvent", {
-          channelId: d.c,
-          eventType: d.e,
-          data: d.d,
-        });
+			default: {
+				if (error.reconnect) {
+					this.connect();
+				}
 
-        break;
-      }
-      case OpCode.HELLO: {
-        this._updateObservedConnectionState(LeapConnectionState.AUTHENTICATING);
-        this._setupHeartbeat((<Hello>data).heartbeat_interval);
-        this._identify();
-        break;
-      }
-      case OpCode.HEARTBEAT: {
-        this.sendPayload(OpCode.HEARTBEAT, { tag: (<Heartbeat>data).tag });
-        break;
-      }
-    }
-  };
+				break;
+			}
+		}
+	};
 
-  private _identify = () => {
-    this.sendPayload(OpCode.IDENTIFY, {
-      project_id: this.auth.projectId,
-      token: this.auth.token,
-    });
-  };
+	private _handleSocketMessage = (m: MessageEvent) => {
+		const data = JSON.parse(m.data.toString()) as EncapsulatingPayload;
 
-  private _setupHeartbeat = (int: number) => {
-    this.heartbeat = setInterval(() => {
-      this.sendPayload(OpCode.HEARTBEAT);
-    }, int);
-  };
+		if (data.op == null) {
+			return console.warn('leap edge received badly formatted payload:', data);
+		}
 
-  private _updateObservedConnectionState = (state: LeapConnectionState) => {
-    this.connectionState = state;
-    this.emit("connectionStateUpdate", state);
-  };
+		console.log('recv:', data);
+
+		this._handleOpcode(data.op, data.d);
+	};
+
+	private _handleOpcode = <T extends keyof PayloadType>(
+		opcode: T,
+		data: PayloadType[T],
+	) => {
+		switch (opcode) {
+			case OpCode.DISPATCH: {
+				const d = <Dispatch>data;
+
+				if (d.e === 'INIT') {
+					this._updateObservedConnectionState(LeapConnectionState.CONNECTED);
+				}
+
+				this.emit('serviceEvent', {
+					channelId: d.c,
+					eventType: d.e,
+					data: d.d,
+				});
+
+				break;
+			}
+
+			case OpCode.HELLO: {
+				this._updateObservedConnectionState(LeapConnectionState.AUTHENTICATING);
+				this._setupHeartbeat((<Hello>data).heartbeat_interval);
+				this._identify();
+
+				break;
+			}
+
+			case OpCode.HEARTBEAT: {
+				this.sendPayload(OpCode.HEARTBEAT, {tag: (<Heartbeat>data).tag});
+
+				break;
+			}
+		}
+	};
+
+	private _identify = () => {
+		this.sendPayload(OpCode.IDENTIFY, {
+			project_id: this.auth.projectId,
+			token: this.auth.token,
+		});
+	};
+
+	private _setupHeartbeat = (int: number) => {
+		this.heartbeat = setInterval(() => {
+			this.sendPayload(OpCode.HEARTBEAT);
+		}, int);
+	};
+
+	private _updateObservedConnectionState = (state: LeapConnectionState) => {
+		this.connectionState = state;
+		this.emit('connectionStateUpdate', state);
+	};
 }

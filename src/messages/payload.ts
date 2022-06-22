@@ -1,6 +1,6 @@
-import { OpCode } from "./opcodes";
+import {OpCode} from './opcodes';
 
 export interface EncapsulatingPayload {
-  op: OpCode;
-  d?: any;
+	op: OpCode;
+	d?: any;
 }
