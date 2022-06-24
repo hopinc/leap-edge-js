@@ -5,8 +5,8 @@ import {errorMap, unknownError, LeapError} from './messages/errors';
 import {EventEmitter} from 'stream';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
-const ENDPOINT = 'wss://leap-stg.hop.io/ws';
-// const ENDPOINT = "ws://localhost:4001/ws";
+// const ENDPOINT = 'wss://leap-stg.hop.io/ws';
+const ENDPOINT = 'ws://localhost:4001/ws';
 
 interface LeapEdgeAuthenticationParameters {
 	token?: string;
