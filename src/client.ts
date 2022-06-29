@@ -1,12 +1,16 @@
 import {Dispatch, Heartbeat, Hello} from './messages/control';
-import {EncapsulatingPayload} from './messages/payload';
+import {
+	EncapsulatingPayload,
+	EncapsulatingServicePayload,
+	LeapServiceEvent,
+} from './messages/payload';
 import {OpCode, PayloadType} from './messages/opcodes';
 import {errorMap, unknownError, LeapError} from './messages/errors';
-import {EventEmitter} from 'stream';
+import {EventEmitter} from 'events';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
-// const ENDPOINT = 'wss://leap-stg.hop.io/ws';
-const ENDPOINT = 'ws://localhost:4001/ws';
+const ENDPOINT = 'wss://leap-stg.hop.io/ws';
+// const ENDPOINT = 'ws://localhost:4001/ws';
 
 interface LeapEdgeAuthenticationParameters {
 	token?: string;
@@ -24,6 +28,13 @@ export enum LeapConnectionState {
 const WebSocket: {new (url: string): WSWebSocket} =
 	typeof window === 'undefined' ? require('ws') : window.WebSocket;
 
+export declare interface LeapEdgeClient {
+	on(
+		event: 'connectionStateUpdate',
+		listener: (state: LeapConnectionState) => void,
+	): this;
+	on(event: 'serviceEvent', listener: (state: LeapServiceEvent) => void): this;
+}
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
 	private endpoint: string;
@@ -59,12 +70,21 @@ export class LeapEdgeClient extends EventEmitter {
 			return;
 		}
 
-		this.socket.addEventListener('message', d => {
-			console.log(d);
-		});
-
 		this.socket.addEventListener('message', this._handleSocketMessage);
 		this.socket.addEventListener('close', this._handleSocketClose);
+	};
+
+	public sendServicePayload = (payload: EncapsulatingServicePayload) => {
+		if (
+			!this.socket ||
+			this.connectionState !== LeapConnectionState.CONNECTED
+		) {
+			throw new Error(
+				'Attempted to send payload when socket connection was not established or authorized',
+			);
+		}
+
+		this.sendPayload(0, payload);
 	};
 
 	private sendPayload = (op: number, d: any = null): void => {
