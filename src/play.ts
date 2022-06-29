@@ -1,5 +1,4 @@
-import {LeapEdgeClient} from '.';
-import {LeapConnectionState} from './client';
+import {LeapConnectionState, LeapEdgeClient} from './index';
 
 const c = new LeapEdgeClient({
 	projectId: 'project_MTc2Mzc5ODU1ODIxMDg2NzM',

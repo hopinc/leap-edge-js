@@ -1,1 +1,1 @@
-export {LeapEdgeClient} from './client';
+export * from './client';

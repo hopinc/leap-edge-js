@@ -10,9 +10,8 @@ import {EventEmitter} from 'events';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
 const ENDPOINT = 'wss://leap-stg.hop.io/ws';
-// const ENDPOINT = 'ws://localhost:4001/ws';
 
-interface LeapEdgeAuthenticationParameters {
+export interface LeapEdgeAuthenticationParameters {
 	token?: string;
 	projectId: string;
 }
@@ -33,6 +32,7 @@ export declare interface LeapEdgeClient {
 		event: 'connectionStateUpdate',
 		listener: (state: LeapConnectionState) => void,
 	): this;
+
 	on(event: 'serviceEvent', listener: (state: LeapServiceEvent) => void): this;
 }
 export class LeapEdgeClient extends EventEmitter {
@@ -101,7 +101,9 @@ export class LeapEdgeClient extends EventEmitter {
 	};
 
 	private _handleSocketClose = (e: CloseEvent) => {
-		if (this.heartbeat) clearInterval(this.heartbeat);
+		if (this.heartbeat) {
+			clearInterval(this.heartbeat);
+		}
 
 		this.socket = null;
 		this.heartbeat = null;
