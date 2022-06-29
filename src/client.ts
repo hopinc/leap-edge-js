@@ -6,7 +6,7 @@ import {
 } from './messages/payload';
 import {OpCode, PayloadType} from './messages/opcodes';
 import {errorMap, unknownError, LeapError} from './messages/errors';
-import {EventEmitter} from 'events';
+import {EventEmitter} from 'eventemitter3';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
 const ENDPOINT = 'wss://leap-stg.hop.io/ws';
@@ -35,6 +35,7 @@ export declare interface LeapEdgeClient {
 
 	on(event: 'serviceEvent', listener: (state: LeapServiceEvent) => void): this;
 }
+
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
 	private endpoint: string;
