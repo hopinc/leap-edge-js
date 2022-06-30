@@ -5,6 +5,7 @@ const c = new LeapEdgeClient({
 	token:
 		'leap_token_c19kOGJjZTRiMGFlM2Q3YjNmN2FlYzg5MzlkMGFkYjliM18yNTYzNjE3MTYwNDQzOTA0MQ',
 });
+
 c.connect();
 
 c.on('connectionStateUpdate', (state: LeapConnectionState) => {
