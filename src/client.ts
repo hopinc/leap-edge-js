@@ -10,7 +10,6 @@ import {EventEmitter} from 'eventemitter3';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
 export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
-// const ENDPOINT = 'ws://localhost:4001/ws';
 
 export interface LeapEdgeAuthenticationParameters {
 	token?: string | null;
