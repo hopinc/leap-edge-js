@@ -6,18 +6,18 @@ import {
 } from './messages/payload';
 import {OpCode, PayloadType} from './messages/opcodes';
 import {errorMap, unknownError, LeapError} from './messages/errors';
-import {EventEmitter} from 'events';
+import {EventEmitter} from 'eventemitter3';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
-const DEFAULT_ENDPOINT = 'wss://leap-stg.hop.io/ws';
+export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
 // const ENDPOINT = 'ws://localhost:4001/ws';
 
-interface LeapEdgeAuthenticationParameters {
+export interface LeapEdgeAuthenticationParameters {
 	token?: string | null;
 	projectId: string;
 }
 
-interface LeapEdgeInitOptions {
+export interface LeapEdgeInitOptions {
 	socketUrl: string;
 	debug: boolean;
 }
@@ -38,8 +38,10 @@ export declare interface LeapEdgeClient {
 		event: 'connectionStateUpdate',
 		listener: (state: LeapConnectionState) => void,
 	): this;
+
 	on(event: 'serviceEvent', listener: (state: LeapServiceEvent) => void): this;
 }
+
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
 	private socket: WSWebSocket | null;
@@ -52,7 +54,7 @@ export class LeapEdgeClient extends EventEmitter {
 		opts?: Partial<LeapEdgeInitOptions>,
 	) {
 		super();
-		this.options = {debug: false, socketUrl: ENDPOINT, ...opts};
+		this.options = {debug: false, socketUrl: DEFAULT_ENDPOINT, ...opts};
 		this.auth = auth;
 		this.socket = null;
 		this.heartbeat = null;
@@ -104,12 +106,14 @@ export class LeapEdgeClient extends EventEmitter {
 			return;
 		}
 
-		console.log('send:', d);
+		if (this.options.debug) console.log('send:', d);
 		this.socket.send(JSON.stringify(d));
 	};
 
 	private _handleSocketClose = (e: CloseEvent) => {
-		if (this.heartbeat) clearInterval(this.heartbeat);
+		if (this.heartbeat) {
+			clearInterval(this.heartbeat);
+		}
 
 		this.socket = null;
 		this.heartbeat = null;
@@ -140,10 +144,11 @@ export class LeapEdgeClient extends EventEmitter {
 		const data = JSON.parse(m.data.toString()) as EncapsulatingPayload;
 
 		if (data.op == null) {
-			return console.warn('leap edge received badly formatted payload:', data);
+			console.warn('leap edge received badly formatted payload:', data);
+			return;
 		}
 
-		console.log('recv:', data);
+		if (this.options.debug) console.log('recv:', data);
 
 		this._handleOpcode(data.op, data.d);
 	};
