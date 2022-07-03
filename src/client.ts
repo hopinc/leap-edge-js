@@ -9,12 +9,17 @@ import {errorMap, unknownError, LeapError} from './messages/errors';
 import {EventEmitter} from 'events';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
-const ENDPOINT = 'wss://leap-stg.hop.io/ws';
+const DEFAULT_ENDPOINT = 'wss://leap-stg.hop.io/ws';
 // const ENDPOINT = 'ws://localhost:4001/ws';
 
 interface LeapEdgeAuthenticationParameters {
-	token?: string;
+	token?: string | null;
 	projectId: string;
+}
+
+interface LeapEdgeInitOptions {
+	socketUrl: string;
+	debug: boolean;
 }
 
 export enum LeapConnectionState {
@@ -37,15 +42,18 @@ export declare interface LeapEdgeClient {
 }
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
-	private endpoint: string;
 	private socket: WSWebSocket | null;
 	private heartbeat: ReturnType<typeof setTimeout> | null;
 	private connectionState: LeapConnectionState;
+	private options: LeapEdgeInitOptions;
 
-	constructor(auth: LeapEdgeAuthenticationParameters) {
+	constructor(
+		auth: LeapEdgeAuthenticationParameters,
+		opts?: Partial<LeapEdgeInitOptions>,
+	) {
 		super();
+		this.options = {debug: false, socketUrl: ENDPOINT, ...opts};
 		this.auth = auth;
-		this.endpoint = ENDPOINT;
 		this.socket = null;
 		this.heartbeat = null;
 		this.connectionState = LeapConnectionState.IDLE;
@@ -64,7 +72,7 @@ export class LeapEdgeClient extends EventEmitter {
 		}
 
 		this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
-		this.socket = new WebSocket(this.endpoint);
+		this.socket = new WebSocket(this.options.socketUrl);
 
 		if (!this.socket) {
 			return;
@@ -113,7 +121,7 @@ export class LeapEdgeClient extends EventEmitter {
 
 		switch (errorCode) {
 			case LeapError.BAD_ROUTE: {
-				this.endpoint = e.reason;
+				this.options.socketUrl = e.reason;
 				this.connect();
 				break;
 			}

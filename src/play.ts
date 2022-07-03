@@ -3,8 +3,7 @@ import {LeapConnectionState} from './client';
 
 const c = new LeapEdgeClient({
 	projectId: 'project_MTc2Mzc5ODU1ODIxMDg2NzM',
-	token:
-		'leap_token_c19kOGJjZTRiMGFlM2Q3YjNmN2FlYzg5MzlkMGFkYjliM18yNTYzNjE3MTYwNDQzOTA0MQ',
+	token: null,
 });
 c.connect();
 
