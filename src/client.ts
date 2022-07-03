@@ -9,11 +9,16 @@ import {errorMap, unknownError, LeapError} from './messages/errors';
 import {EventEmitter} from 'eventemitter3';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
 
-const ENDPOINT = 'wss://leap-stg.hop.io/ws';
+export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
 
 export interface LeapEdgeAuthenticationParameters {
-	token?: string;
+	token?: string | null;
 	projectId: string;
+}
+
+export interface LeapEdgeInitOptions {
+	socketUrl: string;
+	debug: boolean;
 }
 
 export enum LeapConnectionState {
@@ -38,15 +43,18 @@ export declare interface LeapEdgeClient {
 
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
-	private endpoint: string;
 	private socket: WSWebSocket | null;
 	private heartbeat: ReturnType<typeof setTimeout> | null;
 	private connectionState: LeapConnectionState;
+	private options: LeapEdgeInitOptions;
 
-	constructor(auth: LeapEdgeAuthenticationParameters) {
+	constructor(
+		auth: LeapEdgeAuthenticationParameters,
+		opts?: Partial<LeapEdgeInitOptions>,
+	) {
 		super();
+		this.options = {debug: false, socketUrl: DEFAULT_ENDPOINT, ...opts};
 		this.auth = auth;
-		this.endpoint = ENDPOINT;
 		this.socket = null;
 		this.heartbeat = null;
 		this.connectionState = LeapConnectionState.IDLE;
@@ -65,7 +73,7 @@ export class LeapEdgeClient extends EventEmitter {
 		}
 
 		this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
-		this.socket = new WebSocket(this.endpoint);
+		this.socket = new WebSocket(this.options.socketUrl);
 
 		if (!this.socket) {
 			return;
@@ -97,7 +105,7 @@ export class LeapEdgeClient extends EventEmitter {
 			return;
 		}
 
-		console.log('send:', d);
+		if (this.options.debug) console.log('send:', d);
 		this.socket.send(JSON.stringify(d));
 	};
 
@@ -116,7 +124,7 @@ export class LeapEdgeClient extends EventEmitter {
 
 		switch (errorCode) {
 			case LeapError.BAD_ROUTE: {
-				this.endpoint = e.reason;
+				this.options.socketUrl = e.reason;
 				this.connect();
 				break;
 			}
@@ -135,10 +143,11 @@ export class LeapEdgeClient extends EventEmitter {
 		const data = JSON.parse(m.data.toString()) as EncapsulatingPayload;
 
 		if (data.op == null) {
-			return console.warn('leap edge received badly formatted payload:', data);
+			console.warn('leap edge received badly formatted payload:', data);
+			return;
 		}
 
-		console.log('recv:', data);
+		if (this.options.debug) console.log('recv:', data);
 
 		this._handleOpcode(data.op, data.d);
 	};
