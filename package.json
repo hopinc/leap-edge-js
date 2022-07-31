@@ -10,7 +10,7 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"release": "yarn build && yarn npm publish --tag beta"
+		"release": "yarn build && yarn npm publish"
 	},
 	"files": [
 		"dist",
