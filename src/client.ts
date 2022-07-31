@@ -110,6 +110,8 @@ export class LeapEdgeClient extends EventEmitter {
 	};
 
 	private _handleSocketClose = (e: CloseEvent) => {
+		this._updateObservedConnectionState(LeapConnectionState.ERRORED);
+
 		if (this.heartbeat) {
 			clearInterval(this.heartbeat);
 		}
