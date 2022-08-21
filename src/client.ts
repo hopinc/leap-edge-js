@@ -45,6 +45,8 @@ export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
 	private socket: WSWebSocket | null;
 	private heartbeat: ReturnType<typeof setTimeout> | null;
+	private heartbeatInterval: number | null;
+	private lastServerHeartbeatAck: number | null;
 	private connectionState: LeapConnectionState;
 	private options: LeapEdgeInitOptions;
 
@@ -57,6 +59,8 @@ export class LeapEdgeClient extends EventEmitter {
 		this.auth = auth;
 		this.socket = null;
 		this.heartbeat = null;
+		this.heartbeatInterval = null;
+		this.lastServerHeartbeatAck = null;
 		this.connectionState = LeapConnectionState.IDLE;
 	}
 
@@ -110,6 +114,15 @@ export class LeapEdgeClient extends EventEmitter {
 		this.socket.send(JSON.stringify(d));
 	};
 
+	private _resetState = () => {
+		if (this.heartbeat) {
+			clearInterval(this.heartbeat);
+		}
+
+		this.socket = null;
+		this.heartbeat = null;
+	};
+
 	private _handleSocketError = () => {
 		this._updateObservedConnectionState(LeapConnectionState.ERRORED);
 
@@ -126,12 +139,7 @@ export class LeapEdgeClient extends EventEmitter {
 	private _handleSocketClose = (e: CloseEvent) => {
 		this._updateObservedConnectionState(LeapConnectionState.ERRORED);
 
-		if (this.heartbeat) {
-			clearInterval(this.heartbeat);
-		}
-
-		this.socket = null;
-		this.heartbeat = null;
+		this._resetState();
 
 		const errorCode = e.code as LeapError;
 		const error = errorMap[errorCode] || unknownError;
@@ -202,6 +210,11 @@ export class LeapEdgeClient extends EventEmitter {
 
 				break;
 			}
+
+			case OpCode.HEARTBEAT_ACK: {
+				this.lastServerHeartbeatAck = Date.now();
+				break;
+			}
 		}
 	};
 
@@ -213,9 +226,44 @@ export class LeapEdgeClient extends EventEmitter {
 	};
 
 	private _setupHeartbeat = (int: number) => {
+		this.heartbeatInterval = int;
 		this.heartbeat = setInterval(() => {
-			this.sendPayload(OpCode.HEARTBEAT);
+			this._sendHeartbeat();
 		}, int);
+	};
+
+	private _sendHeartbeat = (optimisticResolution?: boolean) => {
+		this.sendPayload(OpCode.HEARTBEAT);
+
+		const sendTs = Date.now();
+		setTimeout(
+			() => this._validateHeartbeatAck(sendTs, optimisticResolution),
+			optimisticResolution ? 750 : 5000,
+		);
+	};
+
+	private _validateHeartbeatAck = (hbtSendTs: number, or?: boolean) => {
+		const diff =
+			this.lastServerHeartbeatAck && this.lastServerHeartbeatAck - hbtSendTs;
+		if (diff && diff >= 0 && diff < 5000) return;
+
+		if (or) {
+			console.log(
+				'[Leap Edge] Optimistic resolution failed. Hard reconnecting...',
+			);
+			this.socket?.close();
+			this._updateObservedConnectionState(LeapConnectionState.ERRORED);
+			this._resetState();
+			this.connect();
+
+			return;
+		}
+
+		console.warn(
+			"[Leap Edge] Leap didn't respond to heartbeat in time. Attempting optimistic heartbeat resolution",
+		);
+
+		this._sendHeartbeat(true);
 	};
 
 	private _updateObservedConnectionState = (state: LeapConnectionState) => {
