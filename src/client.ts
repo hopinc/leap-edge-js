@@ -81,6 +81,7 @@ export class LeapEdgeClient extends EventEmitter {
 
 		this.socket.addEventListener('message', this._handleSocketMessage);
 		this.socket.addEventListener('close', this._handleSocketClose);
+		this.socket.addEventListener('error', this._handleSocketError);
 	};
 
 	public sendServicePayload = (payload: EncapsulatingServicePayload) => {
@@ -107,6 +108,19 @@ export class LeapEdgeClient extends EventEmitter {
 
 		if (this.options.debug) console.log('send:', d);
 		this.socket.send(JSON.stringify(d));
+	};
+
+	private _handleSocketError = () => {
+		this._updateObservedConnectionState(LeapConnectionState.ERRORED);
+
+		if (this.heartbeat) {
+			clearInterval(this.heartbeat);
+		}
+
+		this.socket = null;
+		this.heartbeat = null;
+
+		this.connect();
 	};
 
 	private _handleSocketClose = (e: CloseEvent) => {
