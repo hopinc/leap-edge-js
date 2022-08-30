@@ -106,7 +106,7 @@ export class LeapEdgeClient extends EventEmitter {
 	};
 
 	private encodeSend = (d: unknown) => {
-		if (!this.socket) {
+		if (!this.socket || !this.socket.OPEN) {
 			return;
 		}
 
