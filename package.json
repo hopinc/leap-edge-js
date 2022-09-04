@@ -1,7 +1,7 @@
 {
 	"name": "@onehop/leap-edge-js",
 	"description": "JavaScript client for Leap Edge, by Hop.io",
-	"version": "1.0.4",
+	"version": "1.0.5",
 	"main": "dist/index.js",
 	"module": "dist/index.mjs",
 	"types": "dist/index.d.ts",
@@ -21,6 +21,7 @@
 	"author": "Phineas Walton <phin@hop.io>",
 	"license": "MIT",
 	"devDependencies": {
+		"@types/lodash.throttle": "^4",
 		"@types/node": "^18.0.0",
 		"@types/prettier": "^2",
 		"@types/ws": "^8.5.3",
@@ -31,6 +32,7 @@
 	},
 	"dependencies": {
 		"eventemitter3": "^4.0.7",
+		"lodash.throttle": "^4.1.1",
 		"ws": "^8.8.0"
 	},
 	"packageManager": "yarn@3.2.1"

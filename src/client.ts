@@ -8,6 +8,7 @@ import {OpCode, PayloadType} from './messages/opcodes';
 import {errorMap, unknownError, LeapError} from './messages/errors';
 import {EventEmitter} from 'eventemitter3';
 import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
+import throttle from 'lodash.throttle';
 
 export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
 
@@ -67,7 +68,7 @@ export class LeapEdgeClient extends EventEmitter {
 	/**
 	 * Connect to Leap Edge
 	 */
-	public connect = () => {
+	public connect = throttle(() => {
 		if (this.socket) {
 			console.warn(
 				'[Leap Edge] LeapEdgeClient#connect was called during active connection. This is a noop.',
@@ -86,7 +87,7 @@ export class LeapEdgeClient extends EventEmitter {
 		this.socket.addEventListener('message', this._handleSocketMessage);
 		this.socket.addEventListener('close', this._handleSocketClose);
 		this.socket.addEventListener('error', this._handleSocketError);
-	};
+	}, 1000);
 
 	public sendServicePayload = (payload: EncapsulatingServicePayload) => {
 		if (
@@ -132,8 +133,6 @@ export class LeapEdgeClient extends EventEmitter {
 
 		this.socket = null;
 		this.heartbeat = null;
-
-		this.connect();
 	};
 
 	private _handleSocketClose = (e: CloseEvent) => {
@@ -254,7 +253,6 @@ export class LeapEdgeClient extends EventEmitter {
 			this.socket?.close();
 			this._updateObservedConnectionState(LeapConnectionState.ERRORED);
 			this._resetState();
-			this.connect();
 
 			return;
 		}
