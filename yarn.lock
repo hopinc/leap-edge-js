@@ -96,7 +96,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@onehop/leap-edge-js@workspace:."
   dependencies:
-    "@types/lodash.throttle": ^4
+    "@types/lodash.throttle": ^4.1.7
     "@types/node": ^18.0.0
     "@types/prettier": ^2
     "@types/ws": ^8.5.3
@@ -145,7 +145,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/lodash.throttle@npm:^4":
+"@types/lodash.throttle@npm:^4.1.7":
   version: 4.1.7
   resolution: "@types/lodash.throttle@npm:4.1.7"
   dependencies:
@@ -155,9 +155,9 @@ __metadata:
   linkType: hard
 
 "@types/lodash@npm:*":
-  version: 4.14.184
-  resolution: "@types/lodash@npm:4.14.184"
-  checksum: 6d9a4d67f7f9d0ec3fd21174f3dd3d00629dc1227eb469450eace53adbc1f7e2330699c28d0fe093e5f0fef0f0e763098be1f779268857213224af082b62be21
+  version: 4.14.191
+  resolution: "@types/lodash@npm:4.14.191"
+  checksum: ba0d5434e10690869f32d5ea49095250157cae502f10d57de0a723fd72229ce6c6a4979576f0f13e0aa9fbe3ce2457bfb9fa7d4ec3d6daba56730a51906d1491
   languageName: node
   linkType: hard
 

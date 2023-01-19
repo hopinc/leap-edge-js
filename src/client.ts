@@ -46,7 +46,6 @@ export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
 	private socket: WSWebSocket | null;
 	private heartbeat: ReturnType<typeof setTimeout> | null;
-	private heartbeatInterval: number | null;
 	private lastServerHeartbeatAck: number | null;
 	private connectionState: LeapConnectionState;
 	private options: LeapEdgeInitOptions;
@@ -60,7 +59,6 @@ export class LeapEdgeClient extends EventEmitter {
 		this.auth = auth;
 		this.socket = null;
 		this.heartbeat = null;
-		this.heartbeatInterval = null;
 		this.lastServerHeartbeatAck = null;
 		this.connectionState = LeapConnectionState.IDLE;
 	}
@@ -225,7 +223,6 @@ export class LeapEdgeClient extends EventEmitter {
 	};
 
 	private _setupHeartbeat = (int: number) => {
-		this.heartbeatInterval = int;
 		this.heartbeat = setInterval(() => {
 			this._sendHeartbeat();
 		}, int);
