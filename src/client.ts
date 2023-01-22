@@ -7,7 +7,8 @@ import {
 import {OpCode, PayloadType} from './messages/opcodes';
 import {errorMap, unknownError, LeapError} from './messages/errors';
 import {EventEmitter} from 'eventemitter3';
-import type {MessageEvent, CloseEvent, default as WSWebSocket} from 'ws';
+import type {MessageEvent, CloseEvent} from 'ws';
+import {default as WSWebSocket} from 'ws';
 import throttle from 'lodash.throttle';
 
 export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
@@ -30,8 +31,10 @@ export enum LeapConnectionState {
 	ERRORED = 'errored',
 }
 
-const WebSocket: {new (url: string): WSWebSocket} =
-	typeof window === 'undefined' ? require('ws') : window.WebSocket;
+type AnyWS = WSWebSocket | WebSocket;
+
+const WebSocket: new (address: string) => AnyWS =
+	typeof window === 'undefined' ? WSWebSocket : window.WebSocket;
 
 export declare interface LeapEdgeClient {
 	on(
@@ -44,7 +47,7 @@ export declare interface LeapEdgeClient {
 
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
-	private socket: WSWebSocket | null;
+	private socket: AnyWS | null;
 	private heartbeat: ReturnType<typeof setTimeout> | null;
 	private lastServerHeartbeatAck: number | null;
 	private connectionState: LeapConnectionState;
@@ -82,8 +85,12 @@ export class LeapEdgeClient extends EventEmitter {
 			return;
 		}
 
+		// Union is too complex to even care about fixing, so we'll just ignore it
+		// @ts-expect-error
 		this.socket.addEventListener('message', this._handleSocketMessage);
+		// @ts-expect-error
 		this.socket.addEventListener('close', this._handleSocketClose);
+		// @ts-expect-error
 		this.socket.addEventListener('error', this._handleSocketError);
 	}, 1000);
 

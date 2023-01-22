@@ -1,12 +1,17 @@
 {
 	"name": "@onehop/leap-edge-js",
 	"description": "JavaScript client for Leap Edge, by Hop.io",
-	"version": "1.0.6",
-	"main": "dist/index.js",
-	"module": "dist/index.mjs",
-	"types": "dist/index.d.ts",
+	"version": "1.0.7",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		"import": "./dist/index.mjs",
+		"require": "./dist/index.js",
+		"types": "./dist/index.d.ts"
+	},
 	"publishConfig": {
-		"access": "public"
+		"access": "public",
+		"tag": "next"
 	},
 	"scripts": {
 		"build": "tsup",
