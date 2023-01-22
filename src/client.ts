@@ -1,6 +1,6 @@
 import {EventEmitter} from 'eventemitter3';
 import throttle from 'lodash.throttle';
-import type {CloseEvent, default as WSWebSocket, MessageEvent} from 'ws';
+import type {CloseEvent, MessageEvent, WebSocket as WSWebSocket} from 'ws';
 import {Dispatch, Heartbeat, Hello} from './messages/control';
 import {errorMap, LeapError, unknownError} from './messages/errors';
 import {OpCode, PayloadType} from './messages/opcodes';
@@ -45,6 +45,7 @@ export class LeapEdgeClient extends EventEmitter {
 		| {type: 'node'; instance: WSWebSocket}
 		| {type: 'browser'; instance: WebSocket}
 		| null;
+
 	private heartbeat: ReturnType<typeof setTimeout> | null;
 	private lastServerHeartbeatAck: number | null;
 	private connectionState: LeapConnectionState;
@@ -76,10 +77,6 @@ export class LeapEdgeClient extends EventEmitter {
 		}
 
 		const IS_NODE = typeof WebSocket === 'undefined';
-
-		if (IS_NODE) {
-			return;
-		}
 
 		this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
 
