@@ -1,7 +1,7 @@
 {
 	"name": "@onehop/leap-edge-js",
 	"description": "JavaScript client for Leap Edge, by Hop.io",
-	"version": "1.0.7",
+	"version": "1.0.8",
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {

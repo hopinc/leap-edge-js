@@ -1,15 +1,14 @@
+import {EventEmitter} from 'eventemitter3';
+import throttle from 'lodash.throttle';
+import type {CloseEvent, default as WSWebSocket, MessageEvent} from 'ws';
 import {Dispatch, Heartbeat, Hello} from './messages/control';
+import {errorMap, LeapError, unknownError} from './messages/errors';
+import {OpCode, PayloadType} from './messages/opcodes';
 import {
 	EncapsulatingPayload,
 	EncapsulatingServicePayload,
 	LeapServiceEvent,
 } from './messages/payload';
-import {OpCode, PayloadType} from './messages/opcodes';
-import {errorMap, unknownError, LeapError} from './messages/errors';
-import {EventEmitter} from 'eventemitter3';
-import type {MessageEvent, CloseEvent} from 'ws';
-import {default as WSWebSocket} from 'ws';
-import throttle from 'lodash.throttle';
 
 export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
 
@@ -31,11 +30,6 @@ export enum LeapConnectionState {
 	ERRORED = 'errored',
 }
 
-type AnyWS = WSWebSocket | WebSocket;
-
-const WebSocket: new (address: string) => AnyWS =
-	typeof window === 'undefined' ? WSWebSocket : window.WebSocket;
-
 export declare interface LeapEdgeClient {
 	on(
 		event: 'connectionStateUpdate',
@@ -47,7 +41,10 @@ export declare interface LeapEdgeClient {
 
 export class LeapEdgeClient extends EventEmitter {
 	public auth: LeapEdgeAuthenticationParameters;
-	private socket: AnyWS | null;
+	private socket:
+		| {type: 'node'; instance: WSWebSocket}
+		| {type: 'browser'; instance: WebSocket}
+		| null;
 	private heartbeat: ReturnType<typeof setTimeout> | null;
 	private lastServerHeartbeatAck: number | null;
 	private connectionState: LeapConnectionState;
@@ -69,7 +66,7 @@ export class LeapEdgeClient extends EventEmitter {
 	/**
 	 * Connect to Leap Edge
 	 */
-	public connect = throttle(() => {
+	public connect = throttle(async () => {
 		if (this.socket) {
 			console.warn(
 				'[Leap Edge] LeapEdgeClient#connect was called during active connection. This is a noop.',
@@ -78,20 +75,38 @@ export class LeapEdgeClient extends EventEmitter {
 			return;
 		}
 
+		const IS_NODE = typeof WebSocket === 'undefined';
+
+		if (IS_NODE) {
+			return;
+		}
+
 		this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
-		this.socket = new WebSocket(this.options.socketUrl);
+
+		if (IS_NODE) {
+			const mod = await import('ws');
+
+			this.socket = {
+				type: 'node',
+				instance: new mod.WebSocket(this.options.socketUrl),
+			};
+		} else {
+			this.socket = {
+				type: 'browser',
+				instance: new WebSocket(this.options.socketUrl),
+			};
+		}
 
 		if (!this.socket) {
 			return;
 		}
 
-		// Union is too complex to even care about fixing, so we'll just ignore it
 		// @ts-expect-error
-		this.socket.addEventListener('message', this._handleSocketMessage);
+		this.socket.instance.addEventListener('message', this._handleSocketMessage);
 		// @ts-expect-error
-		this.socket.addEventListener('close', this._handleSocketClose);
+		this.socket.instance.addEventListener('close', this._handleSocketClose);
 		// @ts-expect-error
-		this.socket.addEventListener('error', this._handleSocketError);
+		this.socket.instance.addEventListener('error', this._handleSocketError);
 	}, 1000);
 
 	public sendServicePayload = (payload: EncapsulatingServicePayload) => {
@@ -112,12 +127,12 @@ export class LeapEdgeClient extends EventEmitter {
 	};
 
 	private encodeSend = (d: unknown) => {
-		if (!this.socket || !this.socket.OPEN) {
+		if (!this.socket || !this.socket.instance.OPEN) {
 			return;
 		}
 
 		if (this.options.debug) console.log('send:', d);
-		this.socket.send(JSON.stringify(d));
+		this.socket.instance.send(JSON.stringify(d));
 	};
 
 	private _resetState = () => {
@@ -248,13 +263,17 @@ export class LeapEdgeClient extends EventEmitter {
 	private _validateHeartbeatAck = (hbtSendTs: number, or?: boolean) => {
 		const diff =
 			this.lastServerHeartbeatAck && this.lastServerHeartbeatAck - hbtSendTs;
-		if (diff && diff >= 0 && diff < 5000) return;
+
+		if (diff && diff >= 0 && diff < 5000) {
+			return;
+		}
 
 		if (or) {
 			console.log(
 				'[Leap Edge] Optimistic resolution failed. Hard reconnecting...',
 			);
-			this.socket?.close();
+
+			this.socket?.instance.close();
 			this._updateObservedConnectionState(LeapConnectionState.ERRORED);
 			this._resetState();
 
