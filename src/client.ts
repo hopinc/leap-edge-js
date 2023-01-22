@@ -10,6 +10,8 @@ import {
 	LeapServiceEvent,
 } from './messages/payload';
 
+declare const TSUP_IS_NODE: boolean;
+
 export const DEFAULT_ENDPOINT = 'wss://leap.hop.io/ws';
 
 export interface LeapEdgeAuthenticationParameters {
@@ -76,11 +78,9 @@ export class LeapEdgeClient extends EventEmitter {
 			return;
 		}
 
-		const IS_NODE = typeof WebSocket === 'undefined';
-
 		this._updateObservedConnectionState(LeapConnectionState.CONNECTING);
 
-		if (IS_NODE) {
+		if (TSUP_IS_NODE) {
 			const mod = await import('ws');
 
 			this.socket = {
